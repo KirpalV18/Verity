@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verity — Read What's Real</title>
+<meta name="description" content="A gentle layer of truth across the web. Verity detects AI-written content and helps you read the internet with open eyes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=Lora:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg:       #080808;
+  --surface:  #0f0f0f;
+  --panel:    #161616;
+  --border:   rgba(255,255,255,0.07);
+  --border-h: rgba(255,255,255,0.13);
+  --white:    #f0ede8;
+  --muted:    #6b6760;
+  --ghost:    #333130;
+  --rust:     #c85a2a;
+  --rust-l:   #e06a38;
+  --rust-dim: rgba(200,90,42,0.12);
+  --rust-glow:rgba(200,90,42,0.3);
+  --gold:     #d4a040;
+  --gold-dim: rgba(212,160,64,0.15);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Lora', Georgia, serif;
+  font-weight: 400;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999; opacity: 0.5;
+}
+
+/* Subtle scanlines */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
+  pointer-events: none; z-index: 998;
+}
+
+/* ════ NAV ════ */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 52px; height: 64px;
+  background: rgba(8,8,8,0.85);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s, border-color 0.3s;
+}
+nav.scrolled { background: rgba(8,8,8,0.97); border-bottom-color: rgba(200,90,42,0.2); }
+
+.nav-logo { display: flex; align-items: baseline; gap: 10px; text-decoration: none; }
+
+.nav-logo-word {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700; font-size: 22px; letter-spacing: -0.02em;
+  color: var(--white);
+}
+
+.nav-logo-mark {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px; letter-spacing: 0.12em;
+  color: var(--rust); border: 1px solid rgba(200,90,42,0.4);
+  padding: 2px 7px; text-transform: uppercase;
+  transform: translateY(-2px); display: inline-block;
+}
+
+.nav-links { display: flex; align-items: center; gap: 4px; list-style: none; }
+
+.nav-links a {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--muted); text-decoration: none;
+  padding: 8px 14px; border: 1px solid transparent;
+  transition: all 0.2s;
+}
+.nav-links a:hover { color: var(--white); border-color: var(--border); background: rgba(255,255,255,0.03); }
+.nav-links a.active { color: var(--rust); border-color: rgba(200,90,42,0.2); background: rgba(200,90,42,0.04); }
+
+.nav-right { display: flex; align-items: center; gap: 14px; }
+
+.nav-badge {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  letter-spacing: 0.15em; color: var(--muted);
+  border: 1px solid var(--border); padding: 6px 12px;
+  text-transform: uppercase; display: flex; align-items: center; gap: 8px;
+}
+.badge-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold); box-shadow: 0 0 6px var(--gold);
+  animation: breathe 2.5s ease-in-out infinite; flex-shrink: 0;
+}
+@keyframes breathe { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.nav-cta {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--bg); background: var(--white);
+  padding: 10px 22px; border: none; cursor: pointer;
+  text-decoration: none; transition: background 0.2s, transform 0.15s;
+}
+.nav-cta:hover { background: var(--rust); color: var(--white); transform: translateY(-1px); }
+
+.hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; padding: 6px; background: none; border: 1px solid var(--border); }
+.hamburger span { display: block; width: 20px; height: 1px; background: var(--white); transition: all 0.3s; }
+.hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4px,4px); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(4px,-4px); }
+
+.mobile-menu {
+  display: none; position: fixed; top: 64px; left: 0; right: 0;
+  background: rgba(8,8,8,0.98); border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px); z-index: 490;
+  padding: 20px 24px 28px; flex-direction: column; gap: 0;
+}
+.mobile-menu.open { display: flex; }
+.mobile-menu a {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); text-decoration: none;
+  padding: 14px 0; border-bottom: 1px solid var(--border); transition: color 0.2s;
+}
+.mobile-menu a:hover { color: var(--rust); }
+.mobile-menu a:last-child { border-bottom: none; }
+
+/* ════ TICKER ════ */
+.ticker-wrap {
+  margin-top: 64px; overflow: hidden;
+  background: rgba(200,90,42,0.06);
+  border-top: 1px solid rgba(200,90,42,0.15);
+  border-bottom: 1px solid rgba(200,90,42,0.15);
+  position: relative; z-index: 10;
+}
+.ticker-track { display: flex; width: max-content; animation: scroll 40s linear infinite; }
+.ticker-track:hover { animation-play-state: paused; }
+@keyframes scroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+.ticker-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 48px 10px 0;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  letter-spacing: 0.12em; color: var(--muted);
+  white-space: nowrap; text-transform: uppercase;
+}
+.ticker-item .t-tag { color: var(--rust); font-weight: 500; }
+.ticker-item .t-sep { color: rgba(200,90,42,0.25); font-size: 14px; }
+
+/* ════ MASTHEAD ════ */
+.masthead { border-bottom: 1px solid var(--border); position: relative; overflow: hidden; }
+
+/* Background grid */
+.masthead::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(200,90,42,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200,90,42,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+  pointer-events: none;
+}
+
+.masthead-inner { max-width: 1200px; margin: 0 auto; padding: 0 52px; position: relative; z-index: 2; }
+
+.masthead-date-strip {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.masthead-date {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.masthead-edition {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  color: var(--rust); letter-spacing: 0.1em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+}
+.edition-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rust); box-shadow: 0 0 8px var(--rust); animation: breathe 2s ease-in-out infinite; }
+
+.hero-layout {
+  display: grid; grid-template-columns: 1.2fr 1fr; gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-main { padding: 64px 52px 64px 0; border-right: 1px solid var(--border); }
+
+.hero-eyebrow {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--rust); margin-bottom: 28px;
+  display: flex; align-items: center; gap: 12px;
+}
+.hero-eyebrow::before { content: ''; width: 24px; height: 1px; background: var(--rust); }
+
+.hero-main h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 900; font-size: clamp(52px, 7.5vw, 96px);
+  line-height: 0.93; letter-spacing: -0.02em; margin-bottom: 32px;
+}
+.hero-main h1 em { font-style: italic; color: var(--rust); }
+
+.hero-deck {
+  font-size: 18px; line-height: 1.75; color: #8a8580;
+  max-width: 480px; margin-bottom: 48px;
+}
+.hero-deck strong { color: var(--white); font-weight: 500; }
+
+.hero-cta-group { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+.btn-primary {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--bg); background: var(--white);
+  padding: 15px 32px; border: none; cursor: pointer;
+  text-decoration: none; transition: background 0.2s, transform 0.15s; display: inline-block;
+}
+.btn-primary:hover { background: var(--rust); color: var(--white); transform: translateY(-2px); box-shadow: 0 0 30px var(--rust-glow); }
+
+.btn-ghost {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); background: transparent;
+  border: 1px solid var(--border); padding: 14px 28px;
+  text-decoration: none; transition: all 0.2s; display: inline-block;
+}
+.btn-ghost:hover { color: var(--white); border-color: var(--border-h); background: rgba(255,255,255,0.03); }
+
+.hero-sidebar { padding: 64px 0 64px 52px; display: flex; flex-direction: column; justify-content: space-between; }
+
+.hero-stat-stack { display: flex; flex-direction: column; }
+
+.hero-stat { padding: 28px 0; border-bottom: 1px solid var(--border); position: relative; overflow: hidden; transition: background 0.3s; }
+.hero-stat:first-child { border-top: 1px solid var(--border); }
+.hero-stat::before {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(to right, var(--rust), transparent);
+  transform: scaleX(0); transform-origin: left; transition: transform 0.4s ease;
+}
+.hero-stat:hover::before { transform: scaleX(1); }
+
+.stat-fig {
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 900;
+  font-size: 52px; line-height: 1; letter-spacing: -0.03em; color: var(--white); margin-bottom: 6px;
+}
+.stat-fig span { color: var(--rust); }
+
+.stat-note { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+.hero-pull-quote {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 3px solid var(--rust);
+  padding: 28px 32px; margin-top: 8px;
+}
+.pull-quote-mark { font-family: 'Playfair Display', Georgia, serif; font-size: 56px; line-height: 1; color: var(--rust); opacity: 0.4; margin-bottom: 8px; display: block; }
+.hero-pull-quote p { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 18px; line-height: 1.5; color: #9a9590; }
+
+/* ════ SECTION COMMONS ════ */
+.section { padding: 100px 52px; max-width: 1200px; margin: 0 auto; position: relative; }
+
+.section-header { display: flex; align-items: center; gap: 20px; margin-bottom: 56px; }
+.section-num { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--rust); letter-spacing: 0.2em; text-transform: uppercase; white-space: nowrap; }
+.section-rule { flex: 1; height: 1px; background: var(--border); }
+
+.section h2 {
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 700;
+  font-size: clamp(30px, 4.5vw, 56px); letter-spacing: -0.02em; line-height: 1.05;
+}
+.section h2 em { font-style: italic; color: var(--rust); }
+.lede { font-size: 17px; color: var(--muted); line-height: 1.8; max-width: 580px; margin-top: 20px; }
+
+/* ════ PROBLEM ════ */
+.problem-section { border-bottom: 1px solid var(--border); }
+
+.problem-columns {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); margin-top: 56px;
+}
+
+.problem-card {
+  padding: 44px 40px; background: var(--surface);
+  position: relative; transition: background 0.3s;
+}
+.problem-card:hover { background: var(--panel); }
+.problem-card::after {
+  content: ''; position: absolute; inset: 0;
+  border: 1px solid transparent; pointer-events: none; transition: border-color 0.3s;
+}
+.problem-card:hover::after { border-color: rgba(200,90,42,0.15); }
+
+.card-num {
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  letter-spacing: 0.25em; color: var(--ghost); text-transform: uppercase; margin-bottom: 16px;
+}
+
+.card-icon {
+  font-size: 28px; margin-bottom: 20px; display: block;
+  width: 52px; height: 52px; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--panel); transition: border-color 0.3s, background 0.3s;
+}
+.problem-card:hover .card-icon { border-color: rgba(200,90,42,0.3); background: var(--rust-dim); }
+
+.problem-card h3 {
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 600;
+  font-size: 20px; letter-spacing: -0.01em; margin-bottom: 12px; line-height: 1.25;
+}
+
+.problem-card p { font-size: 14px; color: var(--muted); line-height: 1.75; }
+
+.severity-tag {
+  display: inline-block; margin-top: 20px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--rust); border: 1px solid rgba(200,90,42,0.3);
+  padding: 4px 10px; background: var(--rust-dim);
+}
+
+/* ════ HOW IT WORKS ════ */
+.how-section {
+  background: var(--surface);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 100px 0;
+}
+.how-inner { max-width: 1200px; margin: 0 auto; padding: 0 52px; }
+
+.steps {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); margin-top: 56px;
+}
+
+.step { padding: 40px 32px; background: var(--surface); position: relative; transition: background 0.3s; }
+.step:hover { background: var(--panel); }
+
+.step-index {
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 900;
+  font-size: 64px; line-height: 1; color: rgba(255,255,255,0.04); margin-bottom: 20px; display: block;
+}
+
+.step h3 { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; font-size: 17px; color: var(--white); margin-bottom: 12px; letter-spacing: -0.01em; }
+.step p { font-size: 13px; color: var(--muted); line-height: 1.75; }
+
+.step-arrow {
+  position: absolute; top: 36px; right: 24px;
+  color: var(--rust); font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  opacity: 0; transition: opacity 0.3s, transform 0.3s; transform: translateX(-4px);
+}
+.step:hover .step-arrow { opacity: 1; transform: translateX(0); }
+
+/* ════ FEATURE CALLOUT ════ */
+.feature-section {
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.feature-inner {
+  max-width: 1200px; margin: 0 auto; padding: 80px 52px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+}
+
+.feature-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--rust); margin-bottom: 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.feature-label::before { content: ''; width: 20px; height: 1px; background: var(--rust); }
+
+.feature-left h2 {
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 700;
+  font-size: clamp(26px, 3.5vw, 44px); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 24px;
+}
+.feature-left h2 em { font-style: italic; color: var(--rust); }
+.feature-left p { font-size: 16px; color: var(--muted); line-height: 1.8; margin-bottom: 36px; }
+
+.browser-mockup { width: 100%; border: 1px solid var(--border); background: var(--surface); position: relative; }
+
+.browser-bar {
+  background: var(--panel); border-bottom: 1px solid var(--border);
+  padding: 10px 16px; display: flex; align-items: center; gap: 8px;
+}
+.browser-dot { width: 10px; height: 10px; border: 1px solid var(--border); border-radius: 50%; }
+.browser-url {
+  flex: 1; margin-left: 8px; background: var(--bg);
+  border: 1px solid var(--border); padding: 4px 12px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 0.05em;
+}
+
+.browser-content { padding: 20px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+
+.text-line { height: 10px; background: var(--ghost); border-radius: 2px; opacity: 0.3; position: relative; }
+.text-line.flagged { background: var(--rust); opacity: 0.2; animation: fp 2s ease-in-out infinite; }
+@keyframes fp { 0%,100%{opacity:0.2} 50%{opacity:0.38} }
+
+.flag-bubble {
+  position: absolute; right: -4px; top: -30px;
+  background: var(--rust); color: var(--white);
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  letter-spacing: 0.1em; padding: 5px 10px; white-space: nowrap; text-transform: uppercase;
+}
+.flag-bubble::after {
+  content: ''; position: absolute; bottom: -5px; right: 12px;
+  width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid var(--rust);
+}
+
+.verity-badge {
+  position: absolute; bottom: 14px; right: 14px;
+  background: var(--panel); color: var(--muted);
+  border: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  letter-spacing: 0.12em; padding: 5px 10px; text-transform: uppercase;
+  display: flex; align-items: center; gap: 6px;
+}
+.verity-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+
+/* ════ ROADMAP ════ */
+.roadmap-section { border-bottom: 1px solid var(--border); }
+
+.roadmap-split {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); margin-top: 56px;
+}
+
+.roadmap-phase { padding: 56px 48px; background: var(--surface); }
+.roadmap-phase:hover { background: var(--panel); }
+
+.phase-marker {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px;
+  letter-spacing: 0.18em; text-transform: uppercase; padding: 5px 12px; margin-bottom: 28px;
+}
+.phase-marker.live { background: rgba(200,90,42,0.12); color: var(--rust); border: 1px solid rgba(200,90,42,0.3); }
+.phase-marker.live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: breathe 2s ease-in-out infinite; }
+.phase-marker.future { border: 1px solid var(--border); color: var(--muted); }
+
+.roadmap-phase h3 {
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 700;
+  font-size: clamp(22px, 2.8vw, 34px); letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 16px;
+}
+.roadmap-phase h3 em { font-style: italic; color: var(--rust); }
+.roadmap-phase p { font-size: 15px; color: var(--muted); line-height: 1.8; margin-bottom: 32px; }
+
+.feature-items { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.feature-items li {
+  display: flex; align-items: flex-start; gap: 12px;
+  font-size: 14px; color: #8a8580; line-height: 1.5;
+}
+.feature-items li::before {
+  content: '—'; color: var(--rust); font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px; flex-shrink: 0; margin-top: 2px;
+}
+.future-items li::before { color: var(--muted); }
+
+/* ════ TESTIMONIALS ════ */
+.testimonials-section {
+  background: var(--surface);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 100px 0;
+}
+.testimonials-inner { max-width: 1200px; margin: 0 auto; padding: 0 52px; }
+
+.testimonials-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--border); border: 1px solid var(--border); margin-top: 56px;
+}
+.testimonial { padding: 44px 40px; background: var(--surface); position: relative; transition: background 0.3s; }
+.testimonial:hover { background: var(--panel); }
+
+.testimonial-drop { font-family: 'Playfair Display', Georgia, serif; font-size: 64px; line-height: 1; color: var(--rust); opacity: 0.25; margin-bottom: 12px; display: block; }
+.testimonial p { font-family: 'Lora', serif; font-style: italic; font-size: 14px; color: #8a8580; line-height: 1.8; margin-bottom: 28px; }
+.testi-author { display: flex; align-items: center; gap: 12px; }
+.testi-avatar { width: 38px; height: 38px; border: 1px solid var(--border); background: var(--panel); display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+.testi-name { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; font-size: 13px; color: var(--white); display: block; line-height: 1.3; }
+.testi-title { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; display: block; }
+
+/* ════ VISION ════ */
+.vision-section {
+  text-align: center; padding: 120px 52px;
+  border-bottom: 1px solid var(--border); position: relative; overflow: hidden;
+}
+.vision-section::before {
+  content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 700px; height: 300px;
+  background: radial-gradient(ellipse, rgba(200,90,42,0.07) 0%, transparent 70%);
+  filter: blur(40px); pointer-events: none;
+}
+
+.vision-section h2 {
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 900;
+  font-size: clamp(40px, 8vw, 100px); line-height: 0.95; letter-spacing: -0.03em; margin-bottom: 56px;
+  position: relative; z-index: 2;
+}
+.vision-section h2 .ghost { color: rgba(240,237,232,0.12); }
+.vision-section h2 em { font-style: italic; color: var(--rust); }
+
+.vision-tags { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; position: relative; z-index: 2; }
+.vision-tag {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.15em;
+  text-transform: uppercase; border: 1px solid var(--border);
+  padding: 10px 22px; color: var(--muted); cursor: default; transition: all 0.25s;
+}
+.vision-tag:hover { border-color: rgba(200,90,42,0.4); color: var(--rust); background: var(--rust-dim); transform: translateY(-2px); }
+
+/* ════ FAQ ════ */
+.faq-section { padding: 100px 52px; border-bottom: 1px solid var(--border); max-width: 1200px; margin: 0 auto; }
+
+.faq-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: var(--border); border: 1px solid var(--border); margin-top: 56px;
+}
+.faq-item { padding: 32px 36px; background: var(--surface); cursor: pointer; transition: background 0.2s; }
+.faq-item:hover { background: var(--panel); }
+
+.faq-q { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.faq-q h4 { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; font-size: 16px; line-height: 1.4; letter-spacing: -0.01em; }
+.faq-toggle { font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: var(--rust); flex-shrink: 0; transition: transform 0.3s; line-height: 1; }
+.faq-item.open .faq-toggle { transform: rotate(45deg); }
+
+.faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, opacity 0.3s; opacity: 0; }
+.faq-item.open .faq-answer { max-height: 200px; opacity: 1; }
+.faq-answer p { font-family: 'Lora', serif; font-size: 13px; color: var(--muted); line-height: 1.8; margin-top: 14px; }
+
+/* ════ WAITLIST ════ */
+.waitlist-section {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.waitlist-left { padding: 100px 52px; border-right: 1px solid var(--border); }
+
+.waitlist-left h2 {
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 900;
+  font-size: clamp(36px, 5.5vw, 68px); letter-spacing: -0.03em; line-height: 0.95; margin-bottom: 28px;
+}
+.waitlist-left h2 em { font-style: italic; color: var(--rust); }
+.waitlist-left p { font-size: 16px; color: var(--muted); line-height: 1.8; margin-bottom: 40px; }
+
+.perks { display: flex; flex-direction: column; gap: 12px; }
+.perk { display: flex; align-items: center; gap: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.perk::before { content: '✓'; font-size: 11px; color: var(--rust); }
+
+.waitlist-right { padding: 100px 52px; background: var(--surface); }
+
+.form-title { font-family: 'Playfair Display', Georgia, serif; font-weight: 600; font-size: 22px; letter-spacing: -0.01em; margin-bottom: 32px; }
+
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.form-group input, .form-group select {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--white); font-family: 'Lora', serif; font-size: 15px; padding: 13px 16px;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s; appearance: none; -webkit-appearance: none;
+}
+.form-group input:focus, .form-group select:focus { border-color: rgba(200,90,42,0.5); box-shadow: 0 0 0 2px rgba(200,90,42,0.1); }
+.form-group input::placeholder { color: var(--ghost); }
+.form-group select option { background: var(--surface); }
+
+.submit-btn {
+  width: 100%; background: var(--white); color: var(--bg);
+  border: none; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.2em; text-transform: uppercase; padding: 16px;
+  cursor: pointer; transition: background 0.15s, transform 0.1s; margin-top: 8px;
+}
+.submit-btn:hover { background: var(--rust); color: var(--white); transform: translateY(-1px); box-shadow: 0 0 30px var(--rust-glow); }
+.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.form-note { margin-top: 14px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.1em; color: var(--ghost); text-align: center; }
+
+.success-state { display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 24px; gap: 20px; min-height: 340px; }
+.success-stamp {
+  width: 68px; height: 68px; border: 2px solid var(--rust);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--rust); font-size: 26px; border-radius: 50%;
+  animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn { from{transform:scale(0.3);opacity:0} to{transform:scale(1);opacity:1} }
+.success-state h4 { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 24px; letter-spacing: -0.01em; }
+.success-state p { font-size: 15px; color: var(--muted); max-width: 280px; line-height: 1.7; font-style: italic; }
+
+/* ════ FOOTER ════ */
+footer { background: var(--surface); border-top: 1px solid var(--border); }
+
+.footer-top {
+  padding: 64px 52px 48px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 48px; border-bottom: 1px solid var(--border);
+}
+.footer-brand-name { font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 24px; color: var(--white); margin-bottom: 14px; }
+.footer-tagline { font-size: 14px; color: var(--muted); line-height: 1.75; max-width: 260px; font-style: italic; }
+.footer-social { display: flex; gap: 8px; margin-top: 20px; }
+.soc-link {
+  width: 36px; height: 36px; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); text-decoration: none; font-size: 13px; transition: all 0.2s;
+}
+.soc-link:hover { border-color: rgba(200,90,42,0.4); color: var(--rust); background: var(--rust-dim); }
+
+.footer-col h5 { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(240,237,232,0.25); margin-bottom: 18px; }
+.footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.footer-links a { font-size: 14px; color: var(--muted); text-decoration: none; font-family: 'Lora', serif; transition: color 0.2s; }
+.footer-links a:hover { color: var(--white); }
+.footer-links a.soon { pointer-events: none; opacity: 0.35; }
+.footer-links a.soon::after { content: ' ·'; font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--rust); opacity: 0.7; }
+
+.footer-bottom { padding: 20px 52px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.footer-bottom-l { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; color: var(--ghost); }
+.footer-bottom-r { display: flex; gap: 24px; }
+.footer-bottom-r a { font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.15em; color: var(--ghost); text-decoration: none; text-transform: uppercase; transition: color 0.2s; }
+.footer-bottom-r a:hover { color: var(--muted); }
+
+/* ════ BACK TO TOP ════ */
+.back-top {
+  position: fixed; bottom: 32px; right: 32px;
+  width: 44px; height: 44px; background: var(--surface); color: var(--muted);
+  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+  text-decoration: none; z-index: 200; opacity: 0; transform: translateY(10px);
+  transition: all 0.25s; font-size: 15px;
+}
+.back-top.visible { opacity: 1; transform: translateY(0); }
+.back-top:hover { background: var(--rust-dim); border-color: rgba(200,90,42,0.4); color: var(--rust); }
+
+/* ════ REVEAL ════ */
+.reveal { opacity: 0; transform: translateY(20px); }
+
+/* ════ RESPONSIVE ════ */
+@media (max-width: 900px) {
+  nav { padding: 0 24px; }
+  .nav-links, .nav-badge { display: none; }
+  .hamburger { display: flex; }
+  .masthead-inner { padding: 0 24px; }
+  .hero-layout { grid-template-columns: 1fr; }
+  .hero-main { padding: 48px 0 40px; border-right: none; border-bottom: 1px solid var(--border); }
+  .hero-sidebar { padding: 40px 0 48px; }
+  .section { padding: 72px 24px; }
+  .problem-columns, .steps, .testimonials-grid, .roadmap-split, .faq-grid, .footer-top { grid-template-columns: 1fr; }
+  .problem-card { background: var(--surface); }
+  .step, .testimonial, .roadmap-phase, .faq-item { border-right: none; border-bottom: 1px solid var(--border); }
+  .step:last-child, .testimonial:last-child, .faq-item:last-child { border-bottom: none; }
+  .feature-inner { grid-template-columns: 1fr; gap: 40px; padding: 60px 24px; }
+  .waitlist-section { grid-template-columns: 1fr; }
+  .waitlist-left { padding: 72px 24px; border-right: none; border-bottom: 1px solid var(--border); }
+  .waitlist-right { padding: 56px 24px; }
+  .footer-top { padding: 48px 24px 36px; gap: 28px; }
+  .footer-bottom { flex-direction: column; text-align: center; padding: 16px 24px; }
+  .footer-bottom-r { flex-wrap: wrap; justify-content: center; }
+  .vision-section, .faq-section { padding-left: 24px; padding-right: 24px; }
+  .how-inner, .testimonials-inner { padding: 0 24px; }
+  .back-top { bottom: 20px; right: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav id="main-nav">
+  <a href="#" class="nav-logo" aria-label="Verity Home">
+    <span class="nav-logo-word">Verity</span>
+    <span class="nav-logo-mark">Beta</span>
+  </a>
+  <ul class="nav-links" role="list">
+    <li><a href="#problem" class="nav-link">The Problem</a></li>
+    <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+    <li><a href="#roadmap" class="nav-link">Roadmap</a></li>
+    <li><a href="#faq" class="nav-link">FAQ</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="nav-badge">
+      <span class="badge-dot"></span>
+      Active Development
+    </div>
+    <a href="#waitlist" class="nav-cta">Early Access</a>
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- ── MOBILE MENU ── -->
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#problem" class="mob-link">The Problem</a>
+  <a href="#how-it-works" class="mob-link">How It Works</a>
+  <a href="#roadmap" class="mob-link">Roadmap</a>
+  <a href="#faq" class="mob-link">FAQ</a>
+  <a href="#waitlist" class="mob-link" style="color:var(--rust)">Join the Waitlist →</a>
+</div>
+
+<!-- ── TICKER ── -->
+<div class="ticker-wrap" aria-hidden="true">
+  <div class="ticker-track">
+    <div class="ticker-item"><span class="t-tag">Analysis</span> 71% of LinkedIn posts flagged as synthetic <span class="t-sep">◆</span></div>
+    <div class="ticker-item"><span class="t-tag">Research</span> Detection models improving weekly <span class="t-sep">◆</span></div>
+    <div class="ticker-item"><span class="t-tag">Status</span> Building the authenticity layer <span class="t-sep">◆</span></div>
+    <div class="ticker-item"><span class="t-tag">Alert</span> Voice cloning now requires only 3 seconds of audio <span class="t-sep">◆</span></div>
+    <div class="ticker-item"><span class="t-tag">Phase 1</span> Chrome extension · Coming soon <span class="t-sep">◆</span></div>
+    <div class="ticker-item"><span class="t-tag">Analysis</span> 71% of LinkedIn posts flagged as synthetic <span class="t-sep">◆</span></div>
+    <div class="ticker-item"><span class="t-tag">Research</span> Detection models improving weekly <span class="t-sep">◆</span></div>
+    <div class="ticker-item"><span class="t-tag">Status</span> Building the authenticity layer <span class="t-sep">◆</span></div>
+    <div class="ticker-item"><span class="t-tag">Alert</span> Voice cloning now requires only 3 seconds of audio <span class="t-sep">◆</span></div>
+    <div class="ticker-item"><span class="t-tag">Phase 1</span> Chrome extension · Coming soon <span class="t-sep">◆</span></div>
+  </div>
+</div>
+
+<!-- ── MASTHEAD / HERO ── -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="masthead-date-strip">
+      <span class="masthead-date">Est. 2025 · Vol. I, Issue 1</span>
+      <span class="masthead-edition"><span class="edition-dot"></span>Active Development</span>
+    </div>
+
+    <div class="hero-layout">
+      <div class="hero-main">
+        <div class="hero-eyebrow">Authenticity Infrastructure</div>
+        <h1>Read<br><em>what's</em><br>real.</h1>
+        <p class="hero-deck">
+          The internet became a hall of mirrors. <strong>Verity is the lens that cuts through.</strong> A quiet browser extension that tells you — in plain language — whether what you're reading was written by a person.
+        </p>
+        <div class="hero-cta-group">
+          <a href="#waitlist" class="btn-primary">Join the Waitlist</a>
+          <a href="#how-it-works" class="btn-ghost">How It Works</a>
+        </div>
+      </div>
+
+      <div class="hero-sidebar">
+        <div class="hero-stat-stack">
+          <div class="hero-stat reveal">
+            <div class="stat-fig">90<span>%</span></div>
+            <div class="stat-note">of web content predicted to be AI-generated by 2026</div>
+          </div>
+          <div class="hero-stat reveal">
+            <div class="stat-fig">$78<span>B</span></div>
+            <div class="stat-note">lost to AI-powered fraud and disinformation every year</div>
+          </div>
+          <div class="hero-stat reveal">
+            <div class="stat-fig">0</div>
+            <div class="stat-note">reliable everyday tools exist for authenticity verification</div>
+          </div>
+        </div>
+        <div class="hero-pull-quote reveal">
+          <span class="pull-quote-mark">"</span>
+          <p>Trust is not a feature. It is the foundation everything else is built on.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── PROBLEM ── -->
+<div class="problem-section">
+  <div class="section" id="problem">
+    <div class="section-header">
+      <span class="section-num">§ 01 — The Problem</span>
+      <div class="section-rule"></div>
+    </div>
+    <h2>Trust is collapsing.<br><em>Nobody built a fix.</em></h2>
+    <p class="lede">Generative AI didn't just improve — it quietly erased the line between real and synthetic. Every legacy detection method has already failed.</p>
+
+    <div class="problem-columns">
+      <div class="problem-card reveal">
+        <div class="card-num">Issue 01</div>
+        <div class="card-icon">✍</div>
+        <h3>AI Text, Everywhere</h3>
+        <p>LinkedIn posts, news articles, social threads, reviews — large language models now produce text indistinguishable from human writing at industrial scale.</p>
+        <span class="severity-tag">Critical</span>
+      </div>
+      <div class="problem-card reveal">
+        <div class="card-num">Issue 02</div>
+        <div class="card-icon">🎭</div>
+        <h3>Deepfakes Without Artifacts</h3>
+        <p>The visual tells that once gave deepfakes away are gone. Modern video synthesis fools both humans and legacy detection systems with equal ease.</p>
+        <span class="severity-tag">Escalating</span>
+      </div>
+      <div class="problem-card reveal">
+        <div class="card-num">Issue 03</div>
+        <div class="card-icon">🔊</div>
+        <h3>Voices Cloned in Seconds</h3>
+        <p>Voice synthesis models can clone anyone from a handful of seconds of audio. Phone scams, fabricated evidence, impersonation — trivially accessible.</p>
+        <span class="severity-tag">Active Threat</span>
+      </div>
+      <div class="problem-card reveal">
+        <div class="card-num">Issue 04</div>
+        <div class="card-icon">🛡</div>
+        <h3>Watermarks Are Useless</h3>
+        <p>Metadata is editable. Watermarks are strippable. AI models improve faster than any single detection method can keep pace with.</p>
+        <span class="severity-tag">Infrastructure Gap</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="how-section" id="how-it-works">
+  <div class="how-inner">
+    <div class="section-header">
+      <span class="section-num">§ 02 — How It Works</span>
+      <div class="section-rule"></div>
+    </div>
+    <h2>Four steps.<br><em>Zero friction.</em></h2>
+    <p class="lede">Install once. Browse normally. Verity works quietly in the background so you always know what you're reading.</p>
+
+    <div class="steps">
+      <div class="step reveal">
+        <span class="step-index">01</span>
+        <span class="step-arrow">→</span>
+        <h3>Install the Extension</h3>
+        <p>Add Verity to Chrome in one click. No account required. No setup. Just install and begin reading with clarity.</p>
+      </div>
+      <div class="step reveal">
+        <span class="step-index">02</span>
+        <span class="step-arrow">→</span>
+        <h3>Browse Normally</h3>
+        <p>Read news, scroll your feeds, browse any site. Verity runs invisibly, analyzing text as you move through the web.</p>
+      </div>
+      <div class="step reveal">
+        <span class="step-index">03</span>
+        <span class="step-arrow">→</span>
+        <h3>Detection Fires</h3>
+        <p>When synthetic patterns are found, Verity marks the content and displays a real-time authenticity confidence score.</p>
+      </div>
+      <div class="step reveal">
+        <span class="step-index">04</span>
+        <span class="step-arrow">✓</span>
+        <h3>Understand the Why</h3>
+        <p>Get a plain-language explanation of the signals that flagged the content. No black box. No guesswork. Just clarity.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── EXTENSION FEATURE ── -->
+<section class="feature-section" aria-label="Product Feature">
+  <div class="feature-inner">
+    <div class="feature-left reveal">
+      <div class="feature-label">Phase 1 Product</div>
+      <h2>A browser extension that reads the web — and flags what's <em>synthetic.</em></h2>
+      <p>Browse normally. Verity runs in the background analyzing text across LinkedIn, Twitter, news sites, and comment sections. When something looks machine-made, you'll know — instantly, with a plain reason why.</p>
+      <a href="#waitlist" class="btn-primary">Get Early Access</a>
+    </div>
+    <div class="reveal" style="display:flex;flex-direction:column;align-items:center;gap:24px">
+      <div class="browser-mockup">
+        <div class="browser-bar">
+          <div class="browser-dot"></div>
+          <div class="browser-dot"></div>
+          <div class="browser-dot"></div>
+          <div class="browser-url">thenewsletter.com/article/tech-trends-2025</div>
+        </div>
+        <div class="browser-content">
+          <div class="text-line" style="width:90%"></div>
+          <div class="text-line" style="width:70%"></div>
+          <div class="text-line flagged" style="width:95%">
+            <div class="flag-bubble">87% AI — 4 patterns</div>
+          </div>
+          <div class="text-line flagged" style="width:85%"></div>
+          <div class="text-line flagged" style="width:62%"></div>
+          <div class="text-line" style="width:88%"></div>
+          <div class="text-line" style="width:55%"></div>
+          <div class="text-line" style="width:78%"></div>
+          <div class="text-line flagged" style="width:91%"></div>
+          <div class="text-line" style="width:42%"></div>
+          <div class="verity-badge">Verity Active</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ROADMAP ── -->
+<div class="roadmap-section">
+  <div class="section" id="roadmap">
+    <div class="section-header">
+      <span class="section-num">§ 03 — Roadmap</span>
+      <div class="section-rule"></div>
+    </div>
+    <h2>Two phases.<br><em>One mission.</em></h2>
+
+    <div class="roadmap-split">
+      <div class="roadmap-phase reveal">
+        <div class="phase-marker live">In Development</div>
+        <h3>Text Detection<br><em>Chrome Extension</em></h3>
+        <p>The MVP: a browser extension bringing AI text detection directly to daily browsing. No uploads. No copy-pasting. Just real-time authenticity scoring wherever you read.</p>
+        <ul class="feature-items">
+          <li>Real-time AI text detection on any webpage</li>
+          <li>Authenticity confidence score per content block</li>
+          <li>Plain-English explanation of detected patterns</li>
+          <li>Works on X, LinkedIn, news sites & comments</li>
+          <li>Privacy-first — no browsing data stored or logged</li>
+        </ul>
+      </div>
+      <div class="roadmap-phase reveal">
+        <div class="phase-marker future">Pending Validation</div>
+        <h3>AI Media<br><em>Detection Lab</em></h3>
+        <p>If Phase 1 validates demand, Verity expands into a research lab — building detection infrastructure that keeps pace with generative AI itself.</p>
+        <ul class="feature-items future-items">
+          <li>Deepfake video detection models</li>
+          <li>Synthetic voice and audio verification</li>
+          <li>Generative image authenticity scoring</li>
+          <li>Multi-modal AI detection pipelines</li>
+          <li>API infrastructure for platforms and journalists</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TESTIMONIALS ── -->
+<section class="testimonials-section">
+  <div class="testimonials-inner">
+    <div class="section-header">
+      <span class="section-num">§ 04 — Early Feedback</span>
+      <div class="section-rule"></div>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial reveal">
+        <span class="testimonial-drop">"</span>
+        <p>I fact-check daily and the volume of AI-slop flooding my feeds has become unmanageable. Something like Verity would completely change how I work.</p>
+        <div class="testi-author">
+          <div class="testi-avatar">📰</div>
+          <div>
+            <span class="testi-name">Maya R.</span>
+            <span class="testi-title">Investigative Journalist</span>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial reveal">
+        <span class="testimonial-drop">"</span>
+        <p>Our platform gets flooded with AI-generated reviews and we have no reliable way to catch them at scale. We've been waiting for exactly this.</p>
+        <div class="testi-author">
+          <div class="testi-avatar">💻</div>
+          <div>
+            <span class="testi-name">Daniel K.</span>
+            <span class="testi-title">Platform Developer</span>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial reveal">
+        <span class="testimonial-drop">"</span>
+        <p>My students submit AI-written essays and I genuinely can't tell anymore. An extension with a confidence score would be genuinely life-changing.</p>
+        <div class="testi-author">
+          <div class="testi-avatar">🎓</div>
+          <div>
+            <span class="testi-name">Prof. Sarah L.</span>
+            <span class="testi-title">University Educator</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── VISION ── -->
+<section class="vision-section">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--rust);margin-bottom:36px;display:flex;align-items:center;justify-content:center;gap:16px">
+    <span style="display:block;width:32px;height:1px;background:var(--rust)"></span>
+    Long-Term Vision
+    <span style="display:block;width:32px;height:1px;background:var(--rust)"></span>
+  </div>
+  <h2>
+    <span class="ghost">The authenticity</span><br>
+    <em>infrastructure</em><br>
+    <span class="ghost">of the internet.</span>
+  </h2>
+  <div class="vision-tags">
+    <span class="vision-tag">Social Media Verification</span>
+    <span class="vision-tag">Journalism Integrity</span>
+    <span class="vision-tag">Legal Evidence</span>
+    <span class="vision-tag">Financial Fraud Prevention</span>
+    <span class="vision-tag">Disinformation Defence</span>
+    <span class="vision-tag">Platform API Integration</span>
+    <span class="vision-tag">Real-time Detection</span>
+    <span class="vision-tag">Digital Media Scoring</span>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<div>
+<section class="faq-section" id="faq">
+  <div class="section-header">
+    <span class="section-num">§ 05 — FAQ</span>
+    <div class="section-rule"></div>
+  </div>
+  <h2>Answers to the<br><em>obvious questions.</em></h2>
+
+  <div class="faq-grid">
+    <div class="faq-item reveal" role="button" tabindex="0" aria-expanded="false">
+      <div class="faq-q"><h4>How accurate is AI text detection?</h4><span class="faq-toggle">+</span></div>
+      <div class="faq-answer"><p>No detector is perfect — and anyone claiming otherwise is misleading you. Our goal is a probabilistic confidence score with transparent reasoning, so you can make informed judgments rather than blindly trust a binary result.</p></div>
+    </div>
+    <div class="faq-item reveal" role="button" tabindex="0" aria-expanded="false">
+      <div class="faq-q"><h4>Does Verity store the content I browse?</h4><span class="faq-toggle">+</span></div>
+      <div class="faq-answer"><p>No. Privacy is a core design principle. Text analysis runs without logging or storing your browsing data. We built Verity to restore trust — it would be contradictory to betray yours.</p></div>
+    </div>
+    <div class="faq-item reveal" role="button" tabindex="0" aria-expanded="false">
+      <div class="faq-q"><h4>Will it slow down my browser?</h4><span class="faq-toggle">+</span></div>
+      <div class="faq-answer"><p>Performance is a first-class concern. Analysis runs asynchronously with negligible impact on page load and scroll. You shouldn't notice it's there.</p></div>
+    </div>
+    <div class="faq-item reveal" role="button" tabindex="0" aria-expanded="false">
+      <div class="faq-q"><h4>When will the extension launch?</h4><span class="faq-toggle">+</span></div>
+      <div class="faq-answer"><p>We're in active development. Join the waitlist and you'll be first to know — we'll only reach out when it's genuinely ready. Quality over announcements.</p></div>
+    </div>
+    <div class="faq-item reveal" role="button" tabindex="0" aria-expanded="false">
+      <div class="faq-q"><h4>Is Verity free to use?</h4><span class="faq-toggle">+</span></div>
+      <div class="faq-answer"><p>The early access version will be free. We're focused on validating the product before thinking about pricing. Early waitlist members receive the best possible terms.</p></div>
+    </div>
+    <div class="faq-item reveal" role="button" tabindex="0" aria-expanded="false">
+      <div class="faq-q"><h4>Which browsers are supported?</h4><span class="faq-toggle">+</span></div>
+      <div class="faq-answer"><p>Phase 1 targets Chrome and Chromium-based browsers (Edge, Brave). Firefox support is planned based on Phase 1 feedback and demand signals from the waitlist.</p></div>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ── WAITLIST ── -->
+<section class="waitlist-section" id="waitlist">
+  <div class="waitlist-left">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--rust);margin-bottom:20px;display:flex;align-items:center;gap:12px">
+      <span style="display:block;width:20px;height:1px;background:var(--rust)"></span>
+      Early Access
+    </div>
+    <h2>Be first to<br><em>see clearly.</em></h2>
+    <p>Verity is in active development. Join the waitlist to be among the first to access the Chrome extension — and help shape what gets built.</p>
+    <div class="perks">
+      <div class="perk">Priority early access to the extension</div>
+      <div class="perk">Direct input on features and roadmap</div>
+      <div class="perk">No spam — only launch updates</div>
+      <div class="perk">Free tier guaranteed for early members</div>
+    </div>
+  </div>
+
+  <div class="waitlist-right">
+    <div id="form-container">
+      <div id="form-inner">
+        <p class="form-title">Join the waitlist</p>
+        <!-- Honeypot -->
+        <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none" aria-hidden="true" tabindex="-1">
+          <label for="website">Leave empty</label>
+          <input type="text" id="website" name="website" autocomplete="off" tabindex="-1">
+        </div>
+        <div class="form-group">
+          <label for="email-input">Email Address</label>
+          <input type="email" id="email-input" placeholder="your@email.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="use-case">I'm primarily interested in</label>
+          <select id="use-case">
+            <option value="">Select your use case...</option>
+            <option value="journalism">Journalism &amp; fact-checking</option>
+            <option value="personal">Personal browsing protection</option>
+            <option value="platform">Platform or developer integration</option>
+            <option value="research">Academic research</option>
+            <option value="enterprise">Enterprise or security</option>
+            <option value="other">Just curious</option>
+          </select>
+        </div>
+        <button class="submit-btn" onclick="handleSubmit()" type="button">Request Early Access →</button>
+        <div class="form-note">No spam. Launch updates only.</div>
+      </div>
+      <div class="success-state" id="success-state" role="alert">
+        <div class="success-stamp">✓</div>
+        <h4>You're on the list.</h4>
+        <p>We'll reach out when the extension is ready. In the meantime, the web looks a little different now that you know.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-top">
+    <div>
+      <div class="footer-brand-name">Verity</div>
+      <p class="footer-tagline"><em>Read what's real.</em> Building the authenticity infrastructure the open web deserves.</p>
+      <div class="footer-social">
+        <a href="#" class="soc-link" aria-label="Twitter">𝕏</a>
+        <a href="#" class="soc-link" aria-label="LinkedIn">in</a>
+        <a href="#" class="soc-link" aria-label="GitHub">◆</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h5>Product</h5>
+      <ul class="footer-links">
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#roadmap">Roadmap</a></li>
+        <li><a href="#" class="soon">Chrome Extension</a></li>
+        <li><a href="#" class="soon">API Access</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Company</h5>
+      <ul class="footer-links">
+        <li><a href="#">About</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Press</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h5>Legal</h5>
+      <ul class="footer-links">
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">Cookie Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="footer-bottom-l">© 2025 Verity · Early Stage · Building in Public</div>
+    <div class="footer-bottom-r">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<a href="#" class="back-top" id="back-top" aria-label="Back to top">↑</a>
+
+<script>
+const SUPABASE_URL = 'https://ahbcrcimxawqesbnhisz.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFoYmNyY2lteGF3cWVzYm5oaXN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MTAzODgsImV4cCI6MjA4ODk4NjM4OH0.7Exz0UAOvx3awFq7_5pj6hNJcFOACGRHswgcQPcZE4U';
+
+function getRateData() { try { return JSON.parse(sessionStorage.getItem('verity_rl')||'{"count":0,"start":0}'); } catch { return {count:0,start:0}; } }
+function isRateLimited() { const d=getRateData(),now=Date.now(); if(now-d.start>600000){sessionStorage.setItem('verity_rl',JSON.stringify({count:0,start:now}));return false;} return d.count>=3; }
+function bumpRate() { const d=getRateData(),now=Date.now(); if(now-d.start>600000)sessionStorage.setItem('verity_rl',JSON.stringify({count:1,start:now})); else sessionStorage.setItem('verity_rl',JSON.stringify({count:d.count+1,start:d.start})); }
+
+function setInputErr(show) {
+  const inp=document.getElementById('email-input');
+  inp.style.borderColor=show?'rgba(200,90,42,0.6)':'';
+  inp.style.boxShadow=show?'0 0 0 2px rgba(200,90,42,0.15)':'';
+}
+function setBtn(loading) {
+  const btn=document.querySelector('.submit-btn');
+  btn.disabled=loading; btn.textContent=loading?'Submitting...':'Request Early Access →';
+}
+function showErr(msg) {
+  let el=document.getElementById('form-error');
+  if(!el){el=document.createElement('div');el.id='form-error';el.style.cssText="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.08em;color:var(--rust);border:1px solid rgba(200,90,42,0.3);padding:10px 14px;margin-top:12px;background:rgba(200,90,42,0.05);";document.querySelector('.submit-btn').insertAdjacentElement('afterend',el);}
+  el.textContent=msg;
+}
+function clearErr(){const el=document.getElementById('form-error');if(el)el.remove();}
+
+async function handleSubmit() {
+  if(document.getElementById('website').value){document.getElementById('form-inner').style.display='none';document.getElementById('success-state').style.display='flex';return;}
+  if(isRateLimited()){showErr('Too many attempts. Please wait a few minutes.');return;}
+  const email=document.getElementById('email-input').value.trim();
+  const useCase=document.getElementById('use-case').value;
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){setInputErr(true);setTimeout(()=>setInputErr(false),2000);return;}
+  clearErr();setBtn(true);bumpRate();
+  try {
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/waitlist`,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':`Bearer ${SUPABASE_ANON_KEY}`,'Prefer':'return=minimal'},body:JSON.stringify({email,use_case:useCase||null})});
+    if(res.status===201){document.getElementById('form-inner').style.display='none';document.getElementById('success-state').style.display='flex';}
+    else if(res.status===409){showErr('This email is already on the waitlist.');setBtn(false);}
+    else{showErr('Something went wrong. Please try again.');setBtn(false);}
+  } catch {showErr('Network error — check your connection and try again.');setBtn(false);}
+}
+
+const nav=document.getElementById('main-nav');
+window.addEventListener('scroll',()=>{
+  nav.classList.toggle('scrolled',window.scrollY>40);
+  document.getElementById('back-top').classList.toggle('visible',window.scrollY>400);
+},{passive:true});
+
+const sections=document.querySelectorAll('section[id],div[id]');
+const navLinks=document.querySelectorAll('.nav-link');
+const io=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){navLinks.forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${e.target.id}"]`);if(a)a.classList.add('active');}});},{rootMargin:'-40% 0px -40% 0px'});
+sections.forEach(s=>io.observe(s));
+
+const hamburger=document.getElementById('hamburger');
+const mobileMenu=document.getElementById('mobile-menu');
+hamburger.addEventListener('click',()=>{const open=mobileMenu.classList.toggle('open');hamburger.classList.toggle('open');hamburger.setAttribute('aria-expanded',open);});
+document.querySelectorAll('.mob-link').forEach(l=>l.addEventListener('click',()=>{mobileMenu.classList.remove('open');hamburger.classList.remove('open');hamburger.setAttribute('aria-expanded','false');}));
+
+document.querySelectorAll('.faq-item').forEach(item=>{
+  const toggle=()=>{const open=item.classList.toggle('open');item.setAttribute('aria-expanded',open);};
+  item.addEventListener('click',toggle);
+  item.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+});
+
+const revealObs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)';e.target.style.transition='opacity 0.65s ease, transform 0.65s ease';revealObs.unobserve(e.target);}});},{threshold:0.08});
+document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=`${(i%4)*0.08}s`;revealObs.observe(el);});
+</script>
+</body>
+</html>
